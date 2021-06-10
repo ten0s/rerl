@@ -19,7 +19,7 @@ node=$1
 cmd=${2-ping}
 
 # TODO: get_cookie (node | host)
-host=$(echo $node | awk -F@ '{print $2}')
+host=$(echo $node | cut -d@ -f2)
 
 case $host in
 10.* | 172.*)
