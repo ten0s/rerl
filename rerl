@@ -52,7 +52,8 @@ function eval_call() {
     local node=$1
     local name=$2
     local cookie=$3
-    local expr=$4
+    # Escape double quotes, if not escaped
+    local expr=$(echo $4 | sed -E 's/([^\])"/\1\\"/g')
     local eval="
 {ok, Ts, _} = erl_scan:string(\"$expr\"),
 {ok, Fs} = erl_parse:parse_exprs(Ts),
