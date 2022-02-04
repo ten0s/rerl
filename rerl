@@ -22,10 +22,6 @@ cmd=${2-ping}
 host=$(echo $node | cut -d@ -f2)
 
 case $host in
-10.* | 172.*)
-    name="-name adm$$@127.0.0.1"
-    cookie=$(ssh $host 'cat ~/.erlang.cookie')
-    ;;
 127.0.0.*)
     name="-name adm$$@127.0.0.1"
     cookie=$(cat ~/.erlang.cookie)
@@ -35,8 +31,9 @@ $(hostname))
     cookie=$(cat ~/.erlang.cookie)
     ;;
 *)
-    echo "Unknown host: $host"
-    exit 1
+    name="-name adm$$@127.0.0.1"
+    cookie=$(ssh $host 'cat ~/.erlang.cookie')
+    ;;
 esac
 
 function rpc_call() {
@@ -99,14 +96,14 @@ end.
 "
        path=$(eval_call "$node" "$name" "$cookie" "$eval")
        case $host in
-       10.* | 172.*)
-           ssh $host "tee $path >/dev/null" <$beam || exit 1
-           ;;
        127.0.0.*)
            tee $path >/dev/null <$beam
            ;;
        $(hostname))
            tee $path >/dev/null <$beam
+           ;;
+       *)
+           ssh $host "tee $path >/dev/null" <$beam || exit 1
            ;;
        esac
        rpc_call "$node" "$name" "$cookie" "c,l,['$module']"
