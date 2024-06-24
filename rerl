@@ -21,18 +21,28 @@ cmd=${2-ping}
 # TODO: get_cookie (node | host)
 host=$(echo $node | cut -d@ -f2)
 
+# Try reading the cookie from the file ${node}.cookie
+cookie=""
+if [[ -f $node.cookie ]]; then
+    cookie=$(cat $node.cookie)
+fi
+
 case $host in
 127.0.0.*)
     name="-name adm$$@127.0.0.1"
-    cookie=$(cat ~/.erlang.cookie)
+    [[ -z $cookie ]] && cookie=$(cat ~/.erlang.cookie)
     ;;
 $(hostname))
     name="-sname adm$$"
-    cookie=$(cat ~/.erlang.cookie)
+    [[ -z $cookie ]] && cookie=$(cat ~/.erlang.cookie)
     ;;
 *)
-    name="-name adm$$@127.0.0.1"
-    cookie=$(ssh $host 'cat ~/.erlang.cookie')
+    if [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        name="-name adm$$@127.0.0.1"
+    else
+        name="-sname adm$$"
+    fi
+    [[ -z $cookie ]] && cookie=$(ssh $host 'cat ~/.erlang.cookie')
     ;;
 esac
 
@@ -120,8 +130,10 @@ observer)
    eval="
 pong = net_adm:ping('$node'),
 observer:start(),
-{ok, Names} = net_adm:names(),
-EpmdNames = [list_to_atom(Name) || {Name, _Port} <- Names],
+EpmdNames = case net_adm:names() of
+            {ok, Names} -> [list_to_atom(Name) || {Name, _Port} <- Names];
+            _ -> []
+            end,
 KnownNodes = nodes(),
 Nodes = lists:usort(EpmdNames ++ KnownNodes),
 Id = (catch lists:foldl(fun
